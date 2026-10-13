@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(questionsQuery),
   pendingComponent: () => <div className="min-h-screen flex items-center justify-center font-display text-3xl animate-pulse">Načítám otázky… 🚀</div>,
-  errorComponent: ({ error }) => <div className="p-8 text-center">Otázky se nepodařilo načíst: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-8 text-center">Otázky se nepodařilo načíst: {error instanceof Error ? error.message : String(error)}</div>,
   notFoundComponent: () => <div className="p-8 text-center">Nenalezeno.</div>,
   component: Index,
 });
@@ -47,7 +47,7 @@ function Index() {
 
   const answer = (ok: boolean) => {
     const list = ok ? cheers : oops;
-    setToast({ text: list[Math.floor(Math.random() * list.length)], ok });
+    setToast({ text: list[Math.floor(Math.random() * list.length)] ?? "", ok });
     if (ok) {
       setScore((s) => s + 1);
       setStreak((s) => s + 1);
