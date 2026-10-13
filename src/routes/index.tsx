@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
@@ -114,6 +114,7 @@ function Start({ total, name, setName, onStart }: { total: number; name: string;
         <button onClick={() => onStart(50)} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl">Výzva · 50</button>
         <button onClick={() => onStart(total)} className="pop-btn bg-accent px-6 py-3 text-xl">Mistr · všech {total}</button>
       </div>
+      <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
     </div>
   );
 }
