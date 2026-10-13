@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "English Quest for Eli" },
       { name: "description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
-      { property: "og:title", content: "English Quest – hravý kvíz z angličtiny" },
+      { property: "og:title", content: "English Quest for Eli" },
       { property: "og:description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

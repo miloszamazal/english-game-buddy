@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin")({
     meta: [
       { title: "Administrace – English Quest for Eli" },
       { name: "description", content: "Správa otázek kvízu English Quest." },
-      { property: "og:title", content: "Administrace – English Quest" },
+      { property: "og:title", content: "Administrace – English Quest for Eli" },
       { property: "og:description", content: "Správa otázek kvízu English Quest." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
