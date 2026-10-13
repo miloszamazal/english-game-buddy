@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "English Quest – hravý kvíz z angličtiny pro děti" },
+      { title: "English Quest for Eli" },
       { name: "description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
       { property: "og:title", content: "English Quest – hravý kvíz z angličtiny" },
       { property: "og:description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
