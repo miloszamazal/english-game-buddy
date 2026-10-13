@@ -11,9 +11,9 @@ export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { title: "Administrace – English Quest for Eli" },
-      { name: "description", content: "Správa otázek kvízu English Quest." },
+      { name: "description", content: "Správa otázek kvízu English Quest for Eli." },
       { property: "og:title", content: "Administrace – English Quest for Eli" },
-      { property: "og:description", content: "Správa otázek kvízu English Quest." },
+      { property: "og:description", content: "Správa otázek kvízu English Quest for Eli." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
