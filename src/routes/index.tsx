@@ -65,7 +65,8 @@ function Index() {
       <div className="mx-auto max-w-3xl">
         <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
-            <span className="text-primary">English</span> <span className="text-secondary">Quest</span>
+            <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
+            <span className="text-accent">for Eli</span>
           </h1>
         </header>
         {phase === "start" && <Start total={all.length} name={name} setName={setName} onStart={start} />}
