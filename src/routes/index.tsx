@@ -80,11 +80,12 @@ function Index() {
           </h1>
           <p className="mt-2 font-display text-xl">{subj.icon} {subj.label}</p>
         </header>
-        {phase === "start" && all.length === 0 && (
+        {showResults && <Results />}
+        {!showResults && phase === "start" && all.length === 0 && (
           <div className="pop-card p-8 text-center space-y-4"><div className="text-6xl">🚧</div><p className="text-lg">V sekci <b>{subj.label}</b> zatím nejsou žádné otázky. Přidejte je v administraci.</p><Link to="/admin" className="underline">⚙️ Administrace</Link></div>
         )}
-        {phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
-        {phase === "play" && round[i] && (
+        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
+        {!showResults && phase === "play" && round[i] && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4 font-display font-semibold">
               <span className="pop-btn bg-card px-3 py-1 text-sm">{round[i].category}</span>
