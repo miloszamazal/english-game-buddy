@@ -103,6 +103,7 @@ function Index() {
           </div>
         )}
         {phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        </div>
       </div>
     </main>
   );
