@@ -1,3 +1,4 @@
+import { subjectLang } from "@/lib/subjects";
 import { useMemo, useState } from "react";
 import { shuffle, speak, type Question } from "@/lib/quiz";
 
@@ -17,7 +18,7 @@ export function MatchQuestion({ q, onDone }: { q: Question; onDone: (correct: bo
       return next;
     });
     setSelected(null);
-    speak(word);
+    speak(word, subjectLang(q.subject));
   };
 
   const complete = Object.keys(placed).length === q.options.length;

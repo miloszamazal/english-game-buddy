@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { addQuestions, deleteQuestion, updateQuestion, verifyAdmin, type QuestionInput } from "@/lib/admin.functions";
 import { CSV_EXAMPLE, JSON_EXAMPLE, parseFile, type ParseResult } from "@/lib/import-parse";
 import type { Question } from "@/lib/quiz";
+import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -32,6 +33,7 @@ function errMsg(e: unknown) {
 function Admin() {
   const [pw, setPw] = useState<string | null>(null);
   const [tab, setTab] = useState<"form" | "upload" | "db">("form");
+  const [subject, setSubject] = useState<SubjectId>("en");
   useEffect(() => setPw(sessionStorage.getItem(KEY)), []);
 
   if (!pw) return <Login onOk={(p) => { sessionStorage.setItem(KEY, p); setPw(p); }} />;
@@ -44,9 +46,11 @@ function Admin() {
 
   return (
     <main className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
+        <SubjectMenu value={subject} onChange={setSubject} />
+        <div className="flex-1 min-w-0 space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-4xl font-bold"><span className="text-primary">Admin</span> <span className="text-secondary">Quest</span></h1>
+          <h1 className="text-4xl font-bold"><span className="text-primary">Admin</span> <span className="text-secondary">Quest</span> <span className="text-2xl">· {SUBJECTS.find((x) => x.id === subject)?.icon} {SUBJECTS.find((x) => x.id === subject)?.label}</span></h1>
           <div className="flex gap-2">
             <Link to="/" className="pop-btn bg-card px-4 py-2">← Kvíz</Link>
             <button onClick={() => { sessionStorage.removeItem(KEY); setPw(null); }} className="pop-btn bg-muted px-4 py-2">Odhlásit</button>
@@ -58,10 +62,11 @@ function Admin() {
           ))}
         </nav>
         <section className="pop-card p-6">
-          {tab === "form" && <FormTab pw={pw} />}
-          {tab === "upload" && <UploadTab pw={pw} />}
-          {tab === "db" && <DbTab pw={pw} />}
+          {tab === "form" && <FormTab key={subject} subject={subject} pw={pw} />}
+          {tab === "upload" && <UploadTab key={subject} subject={subject} pw={pw} />}
+          {tab === "db" && <DbTab key={subject} subject={subject} pw={pw} />}
         </section>
+        </div>
       </div>
     </main>
   );
@@ -123,7 +128,7 @@ function QuestionForm({ initial, submitLabel, onSubmit }: { initial: QuestionInp
         </label>
         <label className="space-y-1"><span className="font-semibold">Kategorie</span>
           <input className={input} list="cats" value={q.category} onChange={(e) => setQ({ ...q, category: e.target.value })} />
-          <datalist id="cats"><option value="Gramatika" /><option value="Předložky" /><option value="Slovíčka" /></datalist>
+          <datalist id="cats"><option value="Gramatika" /><option value="Předložky" /><option value="Slovíčka" /><option value="Pravopis" /><option value="Počítání" /><option value="Slovní úlohy" /></datalist>
         </label>
         <label className="space-y-1"><span className="font-semibold">Emoji (nepovinné)</span>
           <input className={input} value={q.emoji ?? ""} onChange={(e) => setQ({ ...q, emoji: e.target.value })} placeholder="🐶" />
@@ -150,17 +155,17 @@ function QuestionForm({ initial, submitLabel, onSubmit }: { initial: QuestionInp
   );
 }
 
-function FormTab({ pw }: { pw: string }) {
+function FormTab({ pw, subject }: { pw: string; subject: SubjectId }) {
   const add = useServerFn(addQuestions);
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Přidat otázku</h2>
-      <QuestionForm initial={empty} submitLabel="Přidat" onSubmit={async (q) => { await add({ data: { password: pw, questions: [q] } }); }} />
+      <QuestionForm initial={empty} submitLabel="Přidat" onSubmit={async (q) => { await add({ data: { password: pw, subject, questions: [q] } }); }} />
     </div>
   );
 }
 
-function UploadTab({ pw }: { pw: string }) {
+function UploadTab({ pw, subject }: { pw: string; subject: SubjectId }) {
   const add = useServerFn(addQuestions);
   const [res, setRes] = useState<ParseResult | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
@@ -190,7 +195,7 @@ function UploadTab({ pw }: { pw: string }) {
           {res.valid.length > 0 && (
             <button className="pop-btn bg-primary text-primary-foreground px-6 py-2" onClick={async () => {
               try {
-                const r = await add({ data: { password: pw, questions: res.valid } });
+                const r = await add({ data: { password: pw, subject, questions: res.valid } });
                 setMsg({ ok: true, t: `Nahráno ${r.inserted} otázek! 🎉` }); setRes(null);
               } catch (x) { setMsg({ ok: false, t: errMsg(x) }); }
             }}>Nahrát {res.valid.length} platných otázek</button>
@@ -221,7 +226,7 @@ function UploadTab({ pw }: { pw: string }) {
   );
 }
 
-function DbTab({ pw }: { pw: string }) {
+function DbTab({ pw, subject }: { pw: string; subject: SubjectId }) {
   const del = useServerFn(deleteQuestion);
   const upd = useServerFn(updateQuestion);
   const [rows, setRows] = useState<Question[]>([]);
@@ -229,7 +234,7 @@ function DbTab({ pw }: { pw: string }) {
   const [editing, setEditing] = useState<number | null>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("questions").select("*").order("id", { ascending: false });
+    const { data } = await supabase.from("questions").select("*").eq("subject", subject).order("id", { ascending: false });
     setRows((data ?? []) as Question[]);
   };
   useEffect(() => { load(); }, []);
