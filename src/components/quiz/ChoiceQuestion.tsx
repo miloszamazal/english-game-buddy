@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Volume2 } from "lucide-react";
-import { shuffle, speak, type Question } from "@/lib/quiz";
+import { shuffle, speak as baseSpeak, type Question } from "@/lib/quiz";
+import { subjectLang } from "@/lib/subjects";
 
 const tileColors = ["bg-sun", "bg-sky", "bg-secondary/40", "bg-primary/25"];
 
 export function ChoiceQuestion({ q, onDone }: { q: Question; onDone: (correct: boolean) => void }) {
   const options = useMemo(() => shuffle(q.options), [q.id]);
   const [picked, setPicked] = useState<string | null>(null);
+  const speak = (t: string) => baseSpeak(t, subjectLang(q.subject));
   const isSentence = q.kind === "sentence";
 
   const playAudio = () => {
@@ -42,9 +44,9 @@ export function ChoiceQuestion({ q, onDone }: { q: Question; onDone: (correct: b
             q.prompt
           )}
         </h2>
-        <button onClick={playAudio} className="pop-btn bg-accent px-4 py-2 flex items-center gap-2" aria-label="Přehrát výslovnost">
+        {q.audio && <button onClick={playAudio} className="pop-btn bg-accent px-4 py-2 flex items-center gap-2" aria-label="Přehrát výslovnost">
           <Volume2 className="size-5" /> Poslechnout
-        </button>
+        </button>}
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         {options.map((o, i) => {

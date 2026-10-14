@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import { fetchQuestions, saveResult, shuffle, type Question } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
+import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
 
 const questionsQuery = queryOptions({ queryKey: ["questions"], queryFn: fetchQuestions, staleTime: Infinity });
 
@@ -31,7 +32,12 @@ const cheers = ["Super! 🎉", "Výborně! ⭐", "Skvělá práce! 🚀", "Jsi h
 const oops = ["Nevadí, příště! 💪", "Skoro! 🙂", "Zkus to dál! 🍀"];
 
 function Index() {
-  const { data: all } = useSuspenseQuery(questionsQuery);
+  const { data: everything } = useSuspenseQuery(questionsQuery);
+  const [subject, setSubject] = useState<SubjectId>("en");
+  const all = everything.filter((q) => (q.subject ?? "en") === subject);
+  const counts = everything.reduce<Record<string, number>>((m, q) => ((m[q.subject ?? "en"] = (m[q.subject ?? "en"] ?? 0) + 1), m), {});
+  const subj = SUBJECTS.find((s) => s.id === subject)!;
+  const [wrong, setWrong] = useState(0);
   const [phase, setPhase] = useState<"start" | "play" | "end">("start");
   const [name, setName] = useState("");
   const [round, setRound] = useState<Question[]>([]);
@@ -42,7 +48,7 @@ function Index() {
 
   const start = (count: number) => {
     setRound(shuffle(all).slice(0, count));
-    setI(0); setScore(0); setStreak(0); setPhase("play");
+    setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
   };
 
   const answer = (ok: boolean) => {
@@ -52,7 +58,7 @@ function Index() {
       setScore((s) => s + 1);
       setStreak((s) => s + 1);
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 }, scalar: 0.8 });
-    } else setStreak(0);
+    } else { setStreak(0); setWrong((w) => w + 1); }
     setTimeout(() => {
       setToast(null);
       if (i + 1 >= round.length) setPhase("end");
@@ -62,20 +68,26 @@ function Index() {
 
   return (
     <main className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
+        <SubjectMenu value={subject} counts={counts} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setPhase("start"); } }} />
+        <div className="flex-1 min-w-0 max-w-3xl">
         <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
             <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
             <span className="text-accent">for Eli</span>
           </h1>
+          <p className="mt-2 font-display text-xl">{subj.icon} {subj.label}</p>
         </header>
-        {phase === "start" && <Start total={all.length} name={name} setName={setName} onStart={start} />}
+        {phase === "start" && all.length === 0 && (
+          <div className="pop-card p-8 text-center space-y-4"><div className="text-6xl">🚧</div><p className="text-lg">V sekci <b>{subj.label}</b> zatím nejsou žádné otázky. Přidejte je v administraci.</p><Link to="/admin" className="underline">⚙️ Administrace</Link></div>
+        )}
+        {phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
         {phase === "play" && round[i] && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4 font-display font-semibold">
               <span className="pop-btn bg-card px-3 py-1 text-sm">{round[i].category}</span>
               <span>Otázka {i + 1} / {round.length}</span>
-              <span className="pop-btn bg-accent px-3 py-1 text-sm">⭐ {score}{streak >= 3 ? ` · 🔥${streak}` : ""}</span>
+              <span className="flex gap-2"><span className="pop-btn bg-accent px-3 py-1 text-sm" title="Správně">⭐ {score}{streak >= 3 ? ` · 🔥${streak}` : ""}</span><span className="pop-btn bg-destructive/20 px-3 py-1 text-sm" title="Špatně">❌ {wrong}</span></span>
             </div>
             <div className="h-4 rounded-full border-[3px] bg-card overflow-hidden">
               <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(i / round.length) * 100}%` }} />
@@ -90,18 +102,19 @@ function Index() {
             </div>
           </div>
         )}
-        {phase === "end" && <End score={score} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        {phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        </div>
       </div>
     </main>
   );
 }
 
-function Start({ total, name, setName, onStart }: { total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void }) {
+function Start({ subject, total, name, setName, onStart }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void }) {
   return (
     <div className="pop-card p-8 text-center space-y-6 animate-pop-in">
       <div className="text-7xl animate-float">🦉📚✨</div>
       <p className="text-lg">
-        Procvič si slovíčka, gramatiku a předložky! V databázi čeká <b>{total} otázek</b> – vyber si, kolik jich zvládneš.
+        Téma <b>{subject}</b>. V databázi čeká <b>{total} otázek</b> – vyber si, kolik jich zvládneš.
       </p>
       <input
         value={name}
@@ -111,8 +124,8 @@ function Start({ total, name, setName, onStart }: { total: number; name: string;
         className="w-full max-w-xs mx-auto block rounded-xl border-[3px] px-4 py-3 text-lg text-center font-display bg-background"
       />
       <div className="flex flex-wrap justify-center gap-4">
-        <button onClick={() => onStart(20)} className="pop-btn bg-secondary text-secondary-foreground px-6 py-3 text-xl">Rychlovka · 20</button>
-        <button onClick={() => onStart(50)} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl">Výzva · 50</button>
+        {total > 20 && <button onClick={() => onStart(20)} className="pop-btn bg-secondary text-secondary-foreground px-6 py-3 text-xl">Rychlovka · 20</button>}
+        {total > 50 && <button onClick={() => onStart(50)} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl">Výzva · 50</button>}
         <button onClick={() => onStart(total)} className="pop-btn bg-accent px-6 py-3 text-xl">Mistr · všech {total}</button>
       </div>
       <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
@@ -120,7 +133,7 @@ function Start({ total, name, setName, onStart }: { total: number; name: string;
   );
 }
 
-function End({ score, total, name, onRestart }: { score: number; total: number; name: string; onRestart: () => void }) {
+function End({ score, wrong, total, name, onRestart }: { score: number; wrong: number; total: number; name: string; onRestart: () => void }) {
   const saved = useRef(false);
   const pct = Math.round((score / total) * 100);
   useEffect(() => {
@@ -139,6 +152,7 @@ function End({ score, total, name, onRestart }: { score: number; total: number; 
       <div className="text-8xl animate-wiggle">{pct >= 70 ? "🏆" : "🎈"}</div>
       <h2 className="text-4xl font-bold">{name.trim() ? `${name.trim()}, ` : ""}{msg}</h2>
       <p className="font-display text-7xl font-bold text-primary">{score} / {total}</p>
+      <p className="text-2xl font-display">⭐ {score} správně · ❌ {wrong} špatně</p>
       <p className="text-xl text-muted-foreground">Úspěšnost {pct} %</p>
       <button onClick={onRestart} className="pop-btn bg-secondary text-secondary-foreground px-10 py-4 text-2xl">Zkusit znovu 🔄</button>
     </div>

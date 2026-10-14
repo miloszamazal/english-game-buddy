@@ -9,6 +9,7 @@ export type Question = {
   answer: string | null;
   images: string[] | null;
   audio: string | null;
+  subject: string;
 };
 
 export async function fetchQuestions(): Promise<Question[]> {
@@ -28,11 +29,11 @@ export function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function speak(text: string) {
+export function speak(text: string, lang = "en-GB") {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-GB";
+  u.lang = lang;
   u.rate = 0.85;
   window.speechSynthesis.speak(u);
 }

@@ -24,6 +24,7 @@ export type Database = {
           kind: string
           options: string[]
           prompt: string
+          subject: string
         }
         Insert: {
           answer?: string | null
@@ -34,6 +35,7 @@ export type Database = {
           kind: string
           options: string[]
           prompt: string
+          subject?: string
         }
         Update: {
           answer?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           kind?: string
           options?: string[]
           prompt?: string
+          subject?: string
         }
         Relationships: []
       }
