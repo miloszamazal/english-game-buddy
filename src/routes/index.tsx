@@ -39,6 +39,7 @@ function Index() {
   const counts = everything.reduce<Record<string, number>>((m, q) => ((m[q.subject ?? "en"] = (m[q.subject ?? "en"] ?? 0) + 1), m), {});
   const subj = SUBJECTS.find((s) => s.id === subject)!;
   const [wrong, setWrong] = useState(0);
+  const [showResults, setShowResults] = useState(false);
   const [phase, setPhase] = useState<"start" | "play" | "end">("start");
   const [name, setName] = useState("");
   const [round, setRound] = useState<Question[]>([]);
@@ -70,7 +71,7 @@ function Index() {
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
-        <SubjectMenu value={subject} counts={counts} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setPhase("start"); } }} />
+        <SubjectMenu value={subject} counts={counts} showResults={showResults} onResults={() => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setShowResults(true); setPhase("start"); } }} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setShowResults(false); setPhase("start"); } }} />
         <div className="flex-1 min-w-0 max-w-3xl">
         <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
