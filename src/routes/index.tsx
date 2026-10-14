@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, saveResult, shuffle, type Question } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
 
 const questionsQuery = queryOptions({ queryKey: ["questions"], queryFn: fetchQuestions, staleTime: Infinity });
+const resultsQuery = queryOptions({ queryKey: ["quiz-results"], queryFn: fetchResults, staleTime: 30_000 });
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -38,6 +39,7 @@ function Index() {
   const counts = everything.reduce<Record<string, number>>((m, q) => ((m[q.subject ?? "en"] = (m[q.subject ?? "en"] ?? 0) + 1), m), {});
   const subj = SUBJECTS.find((s) => s.id === subject)!;
   const [wrong, setWrong] = useState(0);
+  const [showResults, setShowResults] = useState(false);
   const [phase, setPhase] = useState<"start" | "play" | "end">("start");
   const [name, setName] = useState("");
   const [round, setRound] = useState<Question[]>([]);
@@ -69,7 +71,7 @@ function Index() {
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
-        <SubjectMenu value={subject} counts={counts} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setPhase("start"); } }} />
+        <SubjectMenu value={subject} counts={counts} showResults={showResults} onResults={() => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setShowResults(true); setPhase("start"); } }} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setShowResults(false); setPhase("start"); } }} />
         <div className="flex-1 min-w-0 max-w-3xl">
         <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
@@ -78,11 +80,12 @@ function Index() {
           </h1>
           <p className="mt-2 font-display text-xl">{subj.icon} {subj.label}</p>
         </header>
-        {phase === "start" && all.length === 0 && (
+        {showResults && <Results />}
+        {!showResults && phase === "start" && all.length === 0 && (
           <div className="pop-card p-8 text-center space-y-4"><div className="text-6xl">🚧</div><p className="text-lg">V sekci <b>{subj.label}</b> zatím nejsou žádné otázky. Přidejte je v administraci.</p><Link to="/admin" className="underline">⚙️ Administrace</Link></div>
         )}
-        {phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
-        {phase === "play" && round[i] && (
+        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
+        {!showResults && phase === "play" && round[i] && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4 font-display font-semibold">
               <span className="pop-btn bg-card px-3 py-1 text-sm">{round[i].category}</span>
@@ -102,7 +105,7 @@ function Index() {
             </div>
           </div>
         )}
-        {phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
         </div>
       </div>
     </main>
@@ -155,6 +158,59 @@ function End({ score, wrong, total, name, onRestart }: { score: number; wrong: n
       <p className="text-2xl font-display">⭐ {score} správně · ❌ {wrong} špatně</p>
       <p className="text-xl text-muted-foreground">Úspěšnost {pct} %</p>
       <button onClick={onRestart} className="pop-btn bg-secondary text-secondary-foreground px-10 py-4 text-2xl">Zkusit znovu 🔄</button>
+    </div>
+  );
+}
+
+function Results() {
+  const { data: results } = useSuspenseQuery(resultsQuery);
+  const byPlayer = new Map<string, QuizResult[]>();
+  for (const r of results) {
+    const list = byPlayer.get(r.player_name) ?? [];
+    list.push(r);
+    byPlayer.set(r.player_name, list);
+  }
+  const players = [...byPlayer.entries()].sort((a, b) => {
+    const best = (rs: QuizResult[]) => Math.max(...rs.map((r) => r.score / r.total));
+    return best(b[1]) - best(a[1]);
+  });
+  if (results.length === 0) {
+    return <div className="pop-card p-8 text-center space-y-4 animate-pop-in"><div className="text-6xl">🏆</div><p className="text-lg">Zatím tu nejsou žádné výsledky. Zahraj si první kolo!</p></div>;
+  }
+  return (
+    <div className="space-y-6 animate-pop-in">
+      <h2 className="text-4xl font-bold text-center">🏆 Výsledky</h2>
+      {players.map(([player, rs]) => {
+        const bestPct = Math.round(Math.max(...rs.map((r) => r.score / r.total)) * 100);
+        const avgPct = Math.round((rs.reduce((s, r) => s + r.score / r.total, 0) / rs.length) * 100);
+        return (
+          <div key={player} className="pop-card p-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-display text-2xl font-bold">{player}</h3>
+              <div className="flex gap-2 font-display text-sm">
+                <span className="pop-btn bg-card px-3 py-1">🎮 {rs.length}× hráno</span>
+                <span className="pop-btn bg-accent px-3 py-1">🥇 nejlepší {bestPct} %</span>
+                <span className="pop-btn bg-secondary text-secondary-foreground px-3 py-1">📊 průměr {avgPct} %</span>
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {rs.slice(0, 5).map((r) => {
+                const pct = Math.round((r.score / r.total) * 100);
+                return (
+                  <li key={r.id} className="flex items-center justify-between gap-3 text-sm font-display">
+                    <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+                    <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
+                      <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
+                  </li>
+                );
+              })}
+            </ul>
+            {rs.length > 5 && <p className="text-xs text-muted-foreground">…a {rs.length - 5} dalších kol</p>}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -41,3 +41,11 @@ export function speak(text: string, lang = "en-GB") {
 export async function saveResult(player_name: string, score: number, total: number) {
   await supabase.from("quiz_results").insert({ player_name: player_name.slice(0, 30) || "Hráč", score, total });
 }
+
+export type QuizResult = { id: string; player_name: string; score: number; total: number; created_at: string };
+
+export async function fetchResults(): Promise<QuizResult[]> {
+  const { data, error } = await supabase.from("quiz_results").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as QuizResult[];
+}
