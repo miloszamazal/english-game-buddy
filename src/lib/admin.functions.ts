@@ -22,8 +22,9 @@ function checkPassword(pw: string) {
   if (pw !== expected) throw new Error("Špatné heslo.");
 }
 
-function toRow(q: QuestionInput) {
+function toRow(q: QuestionInput, subject?: string) {
   return {
+    ...(subject ? { subject } : {}),
     kind: q.kind,
     category: q.category,
     prompt: q.prompt,
@@ -42,13 +43,13 @@ export const verifyAdmin = createServerFn({ method: "POST" })
   });
 
 export const addQuestions = createServerFn({ method: "POST" })
-  .inputValidator((d: { password: string; questions: QuestionInput[] }) =>
-    z.object({ password: z.string().max(200), questions: z.array(questionSchema).min(1).max(1000) }).parse(d),
+  .inputValidator((d: { password: string; subject: string; questions: QuestionInput[] }) =>
+    z.object({ password: z.string().max(200), subject: z.enum(["en", "cs", "math"]), questions: z.array(questionSchema).min(1).max(1000) }).parse(d),
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("questions").insert(data.questions.map(toRow));
+    const { error } = await supabaseAdmin.from("questions").insert(data.questions.map((q) => toRow(q, data.subject)));
     if (error) throw new Error(error.message);
     return { inserted: data.questions.length };
   });
