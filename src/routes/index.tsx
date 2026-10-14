@@ -70,7 +70,7 @@ function Index() {
 
   return (
     <main className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
+      <div className="mx-auto max-w-[90rem] px-2 flex flex-col md:flex-row gap-8 md:gap-16 lg:gap-24">
         <SubjectMenu value={subject} counts={counts} showResults={showResults} onResults={() => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setShowResults(true); setPhase("start"); } }} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setShowResults(false); setPhase("start"); } }} />
         <div className="flex-1 min-w-0 max-w-3xl">
         <header className="mb-8 text-center">

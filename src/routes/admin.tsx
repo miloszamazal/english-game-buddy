@@ -46,7 +46,7 @@ function Admin() {
 
   return (
     <main className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-6xl flex flex-col md:flex-row gap-6">
+      <div className="mx-auto max-w-[90rem] px-2 flex flex-col md:flex-row gap-8 md:gap-16 lg:gap-24">
         <SubjectMenu value={subject} onChange={setSubject} />
         <div className="flex-1 min-w-0 space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
