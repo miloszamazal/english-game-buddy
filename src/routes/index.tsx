@@ -105,7 +105,7 @@ function Index() {
             </div>
           </div>
         )}
-        {phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
         </div>
       </div>
     </main>
