@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, hasPlayerName, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
@@ -49,7 +49,7 @@ function Index() {
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
   const start = (count: number) => {
-    if (!name.trim()) return;
+    if (!hasPlayerName(name)) return;
     setRound(shuffle(all).slice(0, count));
     setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
   };
@@ -114,7 +114,7 @@ function Index() {
 }
 
 function Start({ subject, total, name, setName, onStart }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void }) {
-  const named = name.trim().length > 0;
+  const named = hasPlayerName(name);
   return (
     <div className="pop-card p-8 text-center space-y-6 animate-pop-in">
       <div className="text-7xl animate-float">🦉📚✨</div>

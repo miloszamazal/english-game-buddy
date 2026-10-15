@@ -38,6 +38,10 @@ export function speak(text: string, lang = "en-GB") {
   window.speechSynthesis.speak(u);
 }
 
+export function hasPlayerName(name: string) {
+  return name.trim().length > 0;
+}
+
 export async function saveResult(player_name: string, score: number, total: number) {
   await supabase.from("quiz_results").insert({ player_name: player_name.slice(0, 30) || "Hráč", score, total });
 }
