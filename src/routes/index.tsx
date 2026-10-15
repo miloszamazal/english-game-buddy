@@ -49,6 +49,7 @@ function Index() {
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
   const start = (count: number) => {
+    if (!name.trim()) return;
     setRound(shuffle(all).slice(0, count));
     setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
   };
@@ -113,6 +114,7 @@ function Index() {
 }
 
 function Start({ subject, total, name, setName, onStart }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void }) {
+  const named = name.trim().length > 0;
   return (
     <div className="pop-card p-8 text-center space-y-6 animate-pop-in">
       <div className="text-7xl animate-float">🦉📚✨</div>
@@ -124,12 +126,16 @@ function Start({ subject, total, name, setName, onStart }: { subject: string; to
         maxLength={30}
         onChange={(e) => setName(e.target.value)}
         placeholder="Tvoje jméno"
+        aria-label="Tvoje jméno"
         className="w-full max-w-xs mx-auto block rounded-xl border-[3px] px-4 py-3 text-lg text-center font-display bg-background"
       />
+      <p className={`font-display font-semibold ${named ? "text-success" : "text-destructive"}`}>
+        {named ? `Super, ${name.trim()}! Teď vyber kolo 👇` : "✍️ Nejdřív napiš svoje jméno – bez něj kvíz nespustíš."}
+      </p>
       <div className="flex flex-wrap justify-center gap-4">
-        {total > 20 && <button onClick={() => onStart(20)} className="pop-btn bg-secondary text-secondary-foreground px-6 py-3 text-xl">Rychlovka · 20</button>}
-        {total > 50 && <button onClick={() => onStart(50)} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl">Výzva · 50</button>}
-        <button onClick={() => onStart(total)} className="pop-btn bg-accent px-6 py-3 text-xl">Mistr · všech {total}</button>
+        {total > 20 && <button onClick={() => onStart(20)} disabled={!named} className="pop-btn bg-secondary text-secondary-foreground px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Rychlovka · 20</button>}
+        {total > 50 && <button onClick={() => onStart(50)} disabled={!named} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Výzva · 50</button>}
+        <button onClick={() => onStart(total)} disabled={!named} className="pop-btn bg-accent px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Mistr · všech {total}</button>
       </div>
       <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
     </div>
