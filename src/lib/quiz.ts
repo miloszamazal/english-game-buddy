@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SUBJECTS } from "@/lib/subjects";
 
 export type Question = {
   id: number;
@@ -42,11 +43,38 @@ export function hasPlayerName(name: string) {
   return name.trim().length > 0;
 }
 
-export async function saveResult(player_name: string, score: number, total: number) {
-  await supabase.from("quiz_results").insert({ player_name: player_name.slice(0, 30) || "Hráč", score, total });
+export async function saveResult(player_name: string, score: number, total: number, subject: string) {
+  await supabase.from("quiz_results").insert({ player_name: player_name.slice(0, 30) || "Hráč", score, total, subject });
 }
 
-export type QuizResult = { id: string; player_name: string; score: number; total: number; created_at: string };
+export type QuizResult = { id: string; player_name: string; score: number; total: number; created_at: string; subject: string };
+
+export function groupResultsByPlayer(results: QuizResult[]): [string, QuizResult[]][] {
+  const byPlayer = new Map<string, QuizResult[]>();
+  for (const r of results) {
+    const list = byPlayer.get(r.player_name) ?? [];
+    list.push(r);
+    byPlayer.set(r.player_name, list);
+  }
+  const best = (rs: QuizResult[]) => Math.max(...rs.map((r) => r.score / r.total));
+  return [...byPlayer.entries()].sort((a, b) => best(b[1]) - best(a[1]));
+}
+
+export function groupResultsBySubject(results: QuizResult[]): [string, QuizResult[]][] {
+  const bySubject = new Map<string, QuizResult[]>();
+  for (const r of results) {
+    const key = r.subject ?? "en";
+    const list = bySubject.get(key) ?? [];
+    list.push(r);
+    bySubject.set(key, list);
+  }
+  const order = SUBJECTS.map((s) => s.id);
+  return [...bySubject.entries()].sort((a, b) => {
+    const ia = order.indexOf(a[0]);
+    const ib = order.indexOf(b[0]);
+    return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
+  });
+}
 
 export async function fetchResults(): Promise<QuizResult[]> {
   const { data, error } = await supabase.from("quiz_results").select("*").order("created_at", { ascending: false });
