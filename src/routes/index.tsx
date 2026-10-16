@@ -176,7 +176,7 @@ function ResultRow({ r, showPlayer }: { r: QuizResult; showPlayer?: boolean }) {
       <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
         <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
       </span>
-      <span className="text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+      {showPlayer && <span className="text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>}
       <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
     </li>
   );
