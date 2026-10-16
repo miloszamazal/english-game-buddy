@@ -75,20 +75,22 @@ function Index() {
       <div className="mx-auto max-w-[90rem] px-2 flex flex-col md:flex-row gap-8 md:gap-16 lg:gap-24">
         <SubjectMenu value={subject} counts={counts} showResults={showResults} onResults={() => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setShowResults(true); setPhase("start"); } }} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setShowResults(false); setPhase("start"); } }} />
         <div className="flex-1 min-w-0 max-w-3xl">
-        <header className="mb-8 text-center relative">
-          <button
-            onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }}
-            className={`pop-btn px-4 py-2 text-sm absolute right-0 top-0 ${soundOn ? "bg-card" : "bg-destructive/20"}`}
-            aria-label={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
-            title={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
-          >
-            {soundOn ? "🔊 Zvuk zapnutý" : "🔇 Zvuk vypnutý"}
-          </button>
+        <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
             <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
             <span className="text-accent">for Eli</span>
           </h1>
-          <p className="mt-2 font-display text-xl">{subj.icon} {subj.label}</p>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <p className="font-display text-xl">{subj.icon} {subj.label}</p>
+            <button
+              onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }}
+              className={`pop-btn px-3 py-1 text-sm ${soundOn ? "bg-card" : "bg-destructive/20"}`}
+              aria-label={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+              title={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+            >
+              {soundOn ? "🔊 Zvuk" : "🔇 Zvuk"}
+            </button>
+          </div>
         </header>
         {showResults && <Results />}
         {!showResults && phase === "start" && all.length === 0 && (
