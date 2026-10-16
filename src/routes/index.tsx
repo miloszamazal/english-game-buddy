@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, hasPlayerName, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
@@ -106,7 +106,7 @@ function Index() {
             </div>
           </div>
         )}
-        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} onRestart={() => setPhase("start")} />}
         </div>
       </div>
     </main>
@@ -142,11 +142,11 @@ function Start({ subject, total, name, setName, onStart }: { subject: string; to
   );
 }
 
-function End({ score, wrong, total, name, onRestart }: { score: number; wrong: number; total: number; name: string; onRestart: () => void }) {
+function End({ score, wrong, total, name, subject, onRestart }: { score: number; wrong: number; total: number; name: string; subject: string; onRestart: () => void }) {
   const saved = useRef(false);
   const pct = Math.round((score / total) * 100);
   useEffect(() => {
-    if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total).catch(() => {}); }
+    if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total, subject).catch(() => {}); }
     const end = Date.now() + 2500;
     const frame = () => {
       confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0 } });
