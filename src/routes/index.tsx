@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, hasPlayerName, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, saveResult, setSoundEnabled, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
@@ -47,6 +47,7 @@ function Index() {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+  const [soundOn, setSoundOn] = useState(isSoundOn);
 
   const start = (count: number) => {
     if (!hasPlayerName(name)) return;
@@ -79,7 +80,17 @@ function Index() {
             <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
             <span className="text-accent">for Eli</span>
           </h1>
-          <p className="mt-2 font-display text-xl">{subj.icon} {subj.label}</p>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <p className="font-display text-xl">{subj.icon} {subj.label}</p>
+            <button
+              onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }}
+              className={`pop-btn px-3 py-1 text-sm ${soundOn ? "bg-card" : "bg-destructive/20"}`}
+              aria-label={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+              title={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+            >
+              {soundOn ? "🔊 Zvuk" : "🔇 Zvuk"}
+            </button>
+          </div>
         </header>
         {showResults && <Results />}
         {!showResults && phase === "start" && all.length === 0 && (
@@ -106,7 +117,7 @@ function Index() {
             </div>
           </div>
         )}
-        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} onRestart={() => setPhase("start")} />}
         </div>
       </div>
     </main>
@@ -142,11 +153,11 @@ function Start({ subject, total, name, setName, onStart }: { subject: string; to
   );
 }
 
-function End({ score, wrong, total, name, onRestart }: { score: number; wrong: number; total: number; name: string; onRestart: () => void }) {
+function End({ score, wrong, total, name, subject, onRestart }: { score: number; wrong: number; total: number; name: string; subject: string; onRestart: () => void }) {
   const saved = useRef(false);
   const pct = Math.round((score / total) * 100);
   useEffect(() => {
-    if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total).catch(() => {}); }
+    if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total, subject).catch(() => {}); }
     const end = Date.now() + 2500;
     const frame = () => {
       confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0 } });
@@ -168,31 +179,45 @@ function End({ score, wrong, total, name, onRestart }: { score: number; wrong: n
   );
 }
 
+function ResultRow({ r, showPlayer }: { r: QuizResult; showPlayer?: boolean }) {
+  const pct = Math.round((r.score / r.total) * 100);
+  return (
+    <li className="flex items-center justify-between gap-3 text-sm font-display">
+      <span className={showPlayer ? "font-bold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{showPlayer ? `👤 ${r.player_name}` : new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+      <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
+        <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+      </span>
+      {showPlayer && <span className="text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>}
+      <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
+    </li>
+  );
+}
+
 function Results() {
   const { data: results } = useSuspenseQuery(resultsQuery);
-  const byPlayer = new Map<string, QuizResult[]>();
-  for (const r of results) {
-    const list = byPlayer.get(r.player_name) ?? [];
-    list.push(r);
-    byPlayer.set(r.player_name, list);
-  }
-  const players = [...byPlayer.entries()].sort((a, b) => {
-    const best = (rs: QuizResult[]) => Math.max(...rs.map((r) => r.score / r.total));
-    return best(b[1]) - best(a[1]);
-  });
+  const [view, setView] = useState<"name" | "subject">("name");
   if (results.length === 0) {
     return <div className="pop-card p-8 text-center space-y-4 animate-pop-in"><div className="text-6xl">🏆</div><p className="text-lg">Zatím tu nejsou žádné výsledky. Zahraj si první kolo!</p></div>;
   }
+  const groups = view === "name" ? groupResultsByPlayer(results) : groupResultsBySubject(results);
   return (
     <div className="space-y-6 animate-pop-in">
-      <h2 className="text-4xl font-bold text-center">🏆 Výsledky</h2>
-      {players.map(([player, rs]) => {
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-bold">🏆 Výsledky</h2>
+        <div className="inline-flex gap-2">
+          <button onClick={() => setView("name")} className={`pop-btn px-5 py-2 text-lg ${view === "name" ? "bg-accent" : "bg-card"}`}>👤 Podle jména</button>
+          <button onClick={() => setView("subject")} className={`pop-btn px-5 py-2 text-lg ${view === "subject" ? "bg-accent" : "bg-card"}`}>📚 Podle oboru</button>
+        </div>
+      </div>
+      {groups.map(([key, rs]) => {
+        const isName = view === "name";
+        const title = isName ? key : `${SUBJECTS.find((s) => s.id === key)?.icon ?? "❓"} ${SUBJECTS.find((s) => s.id === key)?.label ?? key}`;
         const bestPct = Math.round(Math.max(...rs.map((r) => r.score / r.total)) * 100);
         const avgPct = Math.round((rs.reduce((s, r) => s + r.score / r.total, 0) / rs.length) * 100);
         return (
-          <div key={player} className="pop-card p-6 space-y-3">
+          <div key={key} className="pop-card p-6 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-display text-2xl font-bold">{player}</h3>
+              <h3 className="font-display text-2xl font-bold">{title}</h3>
               <div className="flex gap-2 font-display text-sm">
                 <span className="pop-btn bg-card px-3 py-1">🎮 {rs.length}× hráno</span>
                 <span className="pop-btn bg-accent px-3 py-1">🥇 nejlepší {bestPct} %</span>
@@ -200,18 +225,7 @@ function Results() {
               </div>
             </div>
             <ul className="space-y-1">
-              {rs.slice(0, 5).map((r) => {
-                const pct = Math.round((r.score / r.total) * 100);
-                return (
-                  <li key={r.id} className="flex items-center justify-between gap-3 text-sm font-display">
-                    <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>
-                    <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
-                      <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
-                    </span>
-                    <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
-                  </li>
-                );
-              })}
+              {rs.slice(0, 5).map((r) => <ResultRow key={r.id} r={r} showPlayer={!isName} />)}
             </ul>
             {rs.length > 5 && <p className="text-xs text-muted-foreground">…a {rs.length - 5} dalších kol</p>}
           </div>
