@@ -56,6 +56,7 @@ export type Database = {
           id: string
           player_name: string
           score: number
+          subject: string
           total: number
         }
         Insert: {
@@ -63,6 +64,7 @@ export type Database = {
           id?: string
           player_name?: string
           score: number
+          subject?: string
           total: number
         }
         Update: {
@@ -70,6 +72,7 @@ export type Database = {
           id?: string
           player_name?: string
           score?: number
+          subject?: string
           total?: number
         }
         Relationships: []
