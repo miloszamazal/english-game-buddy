@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, saveResult, shuffle, type Question, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, saveResult, setSoundEnabled, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
@@ -47,6 +47,7 @@ function Index() {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+  const [soundOn, setSoundOn] = useState(isSoundOn);
 
   const start = (count: number) => {
     if (!hasPlayerName(name)) return;
@@ -74,7 +75,15 @@ function Index() {
       <div className="mx-auto max-w-[90rem] px-2 flex flex-col md:flex-row gap-8 md:gap-16 lg:gap-24">
         <SubjectMenu value={subject} counts={counts} showResults={showResults} onResults={() => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setShowResults(true); setPhase("start"); } }} onChange={(s) => { if (phase !== "play" || confirm("Ukončit rozehrané kolo?")) { setSubject(s); setShowResults(false); setPhase("start"); } }} />
         <div className="flex-1 min-w-0 max-w-3xl">
-        <header className="mb-8 text-center">
+        <header className="mb-8 text-center relative">
+          <button
+            onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }}
+            className={`pop-btn px-4 py-2 text-sm absolute right-0 top-0 ${soundOn ? "bg-card" : "bg-destructive/20"}`}
+            aria-label={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+            title={soundOn ? "Vypnout zvuk" : "Zapnout zvuk"}
+          >
+            {soundOn ? "🔊 Zvuk zapnutý" : "🔇 Zvuk vypnutý"}
+          </button>
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
             <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
             <span className="text-accent">for Eli</span>
