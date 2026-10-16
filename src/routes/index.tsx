@@ -168,31 +168,45 @@ function End({ score, wrong, total, name, subject, onRestart }: { score: number;
   );
 }
 
+function ResultRow({ r, showPlayer }: { r: QuizResult; showPlayer?: boolean }) {
+  const pct = Math.round((r.score / r.total) * 100);
+  return (
+    <li className="flex items-center justify-between gap-3 text-sm font-display">
+      <span className={showPlayer ? "font-bold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{showPlayer ? `👤 ${r.player_name}` : new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+      <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
+        <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+      <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
+    </li>
+  );
+}
+
 function Results() {
   const { data: results } = useSuspenseQuery(resultsQuery);
-  const byPlayer = new Map<string, QuizResult[]>();
-  for (const r of results) {
-    const list = byPlayer.get(r.player_name) ?? [];
-    list.push(r);
-    byPlayer.set(r.player_name, list);
-  }
-  const players = [...byPlayer.entries()].sort((a, b) => {
-    const best = (rs: QuizResult[]) => Math.max(...rs.map((r) => r.score / r.total));
-    return best(b[1]) - best(a[1]);
-  });
+  const [view, setView] = useState<"name" | "subject">("name");
   if (results.length === 0) {
     return <div className="pop-card p-8 text-center space-y-4 animate-pop-in"><div className="text-6xl">🏆</div><p className="text-lg">Zatím tu nejsou žádné výsledky. Zahraj si první kolo!</p></div>;
   }
+  const groups = view === "name" ? groupResultsByPlayer(results) : groupResultsBySubject(results);
   return (
     <div className="space-y-6 animate-pop-in">
-      <h2 className="text-4xl font-bold text-center">🏆 Výsledky</h2>
-      {players.map(([player, rs]) => {
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-bold">🏆 Výsledky</h2>
+        <div className="inline-flex gap-2">
+          <button onClick={() => setView("name")} className={`pop-btn px-5 py-2 text-lg ${view === "name" ? "bg-accent" : "bg-card"}`}>👤 Podle jména</button>
+          <button onClick={() => setView("subject")} className={`pop-btn px-5 py-2 text-lg ${view === "subject" ? "bg-accent" : "bg-card"}`}>📚 Podle oboru</button>
+        </div>
+      </div>
+      {groups.map(([key, rs]) => {
+        const isName = view === "name";
+        const title = isName ? key : `${SUBJECTS.find((s) => s.id === key)?.icon ?? "❓"} ${SUBJECTS.find((s) => s.id === key)?.label ?? key}`;
         const bestPct = Math.round(Math.max(...rs.map((r) => r.score / r.total)) * 100);
         const avgPct = Math.round((rs.reduce((s, r) => s + r.score / r.total, 0) / rs.length) * 100);
         return (
-          <div key={player} className="pop-card p-6 space-y-3">
+          <div key={key} className="pop-card p-6 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-display text-2xl font-bold">{player}</h3>
+              <h3 className="font-display text-2xl font-bold">{title}</h3>
               <div className="flex gap-2 font-display text-sm">
                 <span className="pop-btn bg-card px-3 py-1">🎮 {rs.length}× hráno</span>
                 <span className="pop-btn bg-accent px-3 py-1">🥇 nejlepší {bestPct} %</span>
@@ -200,18 +214,7 @@ function Results() {
               </div>
             </div>
             <ul className="space-y-1">
-              {rs.slice(0, 5).map((r) => {
-                const pct = Math.round((r.score / r.total) * 100);
-                return (
-                  <li key={r.id} className="flex items-center justify-between gap-3 text-sm font-display">
-                    <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString("cs-CZ")}</span>
-                    <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
-                      <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
-                    </span>
-                    <span className="font-bold whitespace-nowrap">⭐ {r.score}/{r.total} · {pct} %</span>
-                  </li>
-                );
-              })}
+              {rs.slice(0, 5).map((r) => <ResultRow key={r.id} r={r} showPlayer={!isName} />)}
             </ul>
             {rs.length > 5 && <p className="text-xs text-muted-foreground">…a {rs.length - 5} dalších kol</p>}
           </div>
