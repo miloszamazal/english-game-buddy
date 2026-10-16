@@ -63,7 +63,7 @@ export function groupResultsByPlayer(results: QuizResult[]): [string, QuizResult
 export function groupResultsBySubject(results: QuizResult[]): [string, QuizResult[]][] {
   const bySubject = new Map<string, QuizResult[]>();
   for (const r of results) {
-    const key = r.subject ?? "en";
+    const key = r.subject || "en";
     const list = bySubject.get(key) ?? [];
     list.push(r);
     bySubject.set(key, list);
