@@ -68,7 +68,7 @@ export function groupResultsBySubject(results: QuizResult[]): [string, QuizResul
     list.push(r);
     bySubject.set(key, list);
   }
-  const order = SUBJECTS.map((s) => s.id);
+  const order: string[] = SUBJECTS.map((s) => s.id);
   return [...bySubject.entries()].sort((a, b) => {
     const ia = order.indexOf(a[0]);
     const ib = order.indexOf(b[0]);
