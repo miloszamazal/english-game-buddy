@@ -30,8 +30,22 @@ export function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+const SOUND_KEY = "eq-sound-on";
+
+export function isSoundOn() {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(SOUND_KEY) !== "off";
+}
+
+export function setSoundEnabled(on: boolean) {
+  soundOn = on;
+  if (typeof window !== "undefined") window.localStorage.setItem(SOUND_KEY, on ? "on" : "off");
+}
+
+let soundOn = isSoundOn();
+
 export function speak(text: string, lang = "en-GB") {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  if (!soundOn || typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
