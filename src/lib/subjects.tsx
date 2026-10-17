@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export const SUBJECTS = [
   { id: "en", label: "Angličtina", icon: "🇬🇧", lang: "en-GB" },
   { id: "cs", label: "Čeština", icon: "🇨🇿", lang: "cs-CZ" },
@@ -16,26 +18,30 @@ export function subjectMeta(id: string | undefined) {
 
 export function SubjectMenu({ value, onChange, counts, showResults, onResults }: { value: SubjectId; onChange: (s: SubjectId) => void; counts?: Record<string, number>; showResults?: boolean; onResults?: () => void }) {
   return (
-    <nav className="pop-card p-3 flex md:flex-col gap-2 md:w-52 shrink-0 md:sticky md:top-6 self-start overflow-x-auto">
+    <nav aria-label="Výběr oboru" className="pop-card p-2 md:p-3 grid grid-cols-2 md:flex md:flex-col gap-2 w-full min-w-0 md:w-52 shrink-0 md:sticky md:top-6 self-start">
       {SUBJECTS.map((s, i) => (
-        <button
+        <Button
+          variant="ghost"
           key={s.id}
           onClick={() => onChange(s.id)}
-          className={`pop-btn px-4 py-3 text-left flex items-center gap-2 whitespace-nowrap ${!showResults && value === s.id ? "bg-accent" : "bg-card"}`}
+          aria-pressed={!showResults && value === s.id}
+          className={`pop-btn h-auto min-h-14 min-w-0 px-2 md:px-4 py-2 md:py-3 text-left grid grid-cols-[auto_minmax(0,1fr)] md:flex items-center justify-start gap-x-2 gap-y-0 whitespace-normal md:whitespace-nowrap ${!showResults && value === s.id ? "bg-accent" : "bg-card"}`}
         >
-          <span className="text-2xl">{s.icon}</span>
-          <span className="flex-1">{i + 1}. {s.label}</span>
-          {counts && <span className="text-xs text-muted-foreground">{counts[s.id] ?? 0}</span>}
-        </button>
+          <span className="text-xl md:text-2xl shrink-0">{s.icon}</span>
+          <span className="min-w-0 md:flex-1 text-sm md:text-base"><span className="hidden md:inline">{i + 1}. </span>{s.label}</span>
+          {counts && <span className="col-start-2 text-xs text-muted-foreground">{counts[s.id] ?? 0}</span>}
+        </Button>
       ))}
       {onResults && (
-        <button
+        <Button
+          variant="ghost"
           onClick={onResults}
-          className={`pop-btn px-4 py-3 text-left flex items-center gap-2 whitespace-nowrap ${showResults ? "bg-accent" : "bg-card"}`}
+          aria-pressed={Boolean(showResults)}
+          className={`pop-btn h-auto min-h-14 min-w-0 px-2 md:px-4 py-2 md:py-3 text-left grid grid-cols-[auto_minmax(0,1fr)] md:flex items-center justify-start gap-2 whitespace-normal md:whitespace-nowrap ${showResults ? "bg-accent" : "bg-card"}`}
         >
-          <span className="text-2xl">🏆</span>
-          <span className="flex-1">{SUBJECTS.length + 1}. Výsledky</span>
-        </button>
+          <span className="text-xl md:text-2xl shrink-0">🏆</span>
+          <span className="min-w-0 md:flex-1 text-sm md:text-base"><span className="hidden md:inline">{SUBJECTS.length + 1}. </span>Výsledky</span>
+        </Button>
       )}
     </nav>
   );

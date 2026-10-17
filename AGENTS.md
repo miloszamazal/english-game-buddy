@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Bulk question deletion must validate the admin password server-side and constrain deletion by both explicit IDs and the selected subject; this prevents accidental cross-subject deletion.
+- Keep subject navigation in the shared SubjectMenu component so quiz and administration use the same responsive layout.
