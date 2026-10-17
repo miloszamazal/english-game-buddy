@@ -10,6 +10,10 @@ export function subjectLang(id: string | undefined) {
   return SUBJECTS.find((s) => s.id === id)?.lang ?? "en-GB";
 }
 
+export function subjectMeta(id: string | undefined) {
+  return SUBJECTS.find((s) => s.id === (id || "en")) ?? SUBJECTS[0];
+}
+
 export function SubjectMenu({ value, onChange, counts, showResults, onResults }: { value: SubjectId; onChange: (s: SubjectId) => void; counts?: Record<string, number>; showResults?: boolean; onResults?: () => void }) {
   return (
     <nav className="pop-card p-3 flex md:flex-col gap-2 md:w-52 shrink-0 md:sticky md:top-6 self-start overflow-x-auto">
