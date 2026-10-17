@@ -2,7 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { addQuestions, deleteQuestion, updateQuestion, verifyAdmin, type QuestionInput } from "@/lib/admin.functions";
+import { addQuestions, deleteQuestion, deleteQuestions, updateQuestion, verifyAdmin, type QuestionInput } from "@/lib/admin.functions";
+import { useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { CSV_EXAMPLE, JSON_EXAMPLE, parseFile, type ParseResult } from "@/lib/import-parse";
 import type { Question } from "@/lib/quiz";
 import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
@@ -228,26 +232,74 @@ function UploadTab({ pw, subject }: { pw: string; subject: SubjectId }) {
 
 function DbTab({ pw, subject }: { pw: string; subject: SubjectId }) {
   const del = useServerFn(deleteQuestion);
+  const bulkDel = useServerFn(deleteQuestions);
+  const queryClient = useQueryClient();
   const upd = useServerFn(updateQuestion);
   const [rows, setRows] = useState<Question[]>([]);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
+  const [category, setCategory] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; t: string } | null>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("questions").select("*").eq("subject", subject).order("id", { ascending: false });
+    const { data, error } = await supabase.from("questions").select("*").eq("subject", subject).order("id", { ascending: false });
+    if (error) { setMessage({ ok: false, t: error.message }); return; }
     setRows((data ?? []) as Question[]);
   };
   useEffect(() => { load(); }, []);
 
-  const filtered = rows.filter((r) => `${r.prompt} ${r.category} ${r.options.join(" ")}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = rows.filter((r) => (!category || r.category === category) && `${r.prompt} ${r.category} ${r.options.join(" ")}`.toLowerCase().includes(search.toLowerCase()));
+  const allSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.id));
+  const changeFilter = () => { setSelected(new Set()); setEditing(null); setMessage(null); };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Databáze otázek ({rows.length})</h2>
-        <input className={`${input} max-w-xs`} placeholder="Hledat…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input aria-label="Hledat otázky" className={`${input} max-w-xs`} placeholder="Hledat…" value={search} disabled={busy} onChange={(e) => { setSearch(e.target.value); changeFilter(); }} />
       </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <select aria-label="Filtrovat podle kategorie" className={`${input} sm:max-w-xs`} value={category} disabled={busy} onChange={(e) => { setCategory(e.target.value); changeFilter(); }}>
+          <option value="">Všechny kategorie</option>
+          {[...new Set(rows.map((r) => r.category))].sort().map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="size-5 accent-primary" checked={allSelected} disabled={busy || filtered.length === 0} onChange={(e) => setSelected(e.target.checked ? new Set(filtered.map((r) => r.id)) : new Set())} />
+          Vybrat zobrazené ({filtered.length})
+        </label>
+        <span className="text-muted-foreground">Vybráno: {selected.size}</span>
+        <Button variant="destructive" disabled={busy || selected.size === 0} onClick={() => { setMessage(null); setConfirmOpen(true); }}><Trash2 /> Smazat vybrané ({selected.size})</Button>
+      </div>
+      {message && <p role="status" className={`font-semibold ${message.ok ? "text-success" : "text-destructive"}`}>{message.t}</p>}
+      <AlertDialog open={confirmOpen} onOpenChange={(open) => { if (!busy) setConfirmOpen(open); }}>
+        <AlertDialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat vybrané otázky ({selected.size})?</AlertDialogTitle>
+            <AlertDialogDescription>Obor: {SUBJECTS.find((s) => s.id === subject)?.label}. Trvale smažete pouze označené otázky. Ostatní otázky a výsledky kvízů zůstanou zachované. Smazání nelze vrátit.</AlertDialogDescription>
+          </AlertDialogHeader>
+          {message && !message.ok && <p role="alert" className="text-destructive">{message.t}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Zrušit</AlertDialogCancel>
+            <Button variant="destructive" disabled={busy} onClick={async () => {
+              setBusy(true); setMessage(null);
+              try {
+                const result = await bulkDel({ data: { password: pw, subject, ids: [...selected] } });
+                setRows((current) => current.filter((r) => !selected.has(r.id)));
+                setSelected(new Set()); setEditing(null); setConfirmOpen(false);
+                setMessage({ ok: true, t: `Smazáno ${result.deleted} otázek.` });
+                await queryClient.invalidateQueries({ queryKey: ["questions"] });
+                await load();
+              } catch (e) { setMessage({ ok: false, t: errMsg(e) }); }
+              finally { setBusy(false); }
+            }}><Trash2 /> {busy ? "Mažu…" : "Trvale smazat"}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="max-h-[60vh] overflow-auto space-y-2">
+        {filtered.length === 0 && <p className="text-muted-foreground py-4">Žádné otázky pro tento výběr.</p>}
         {filtered.map((r) => (
           <div key={r.id} className="rounded-xl border-2 p-3">
             {editing === r.id && r.kind !== "match" ? (
@@ -257,16 +309,21 @@ function DbTab({ pw, subject }: { pw: string; subject: SubjectId }) {
                 onSubmit={async (q) => { await upd({ data: { password: pw, id: r.id, question: q } }); setEditing(null); await load(); }}
               />
             ) : (
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm">
+              <div className="flex flex-wrap items-start gap-3">
+                <input type="checkbox" aria-label={`Vybrat otázku ${r.id}`} className="size-5 shrink-0 accent-primary" disabled={busy} checked={selected.has(r.id)} onChange={(e) => setSelected((current) => { const next = new Set(current); if (e.target.checked) next.add(r.id); else next.delete(r.id); return next; })} />
+                <div className="text-sm min-w-0 flex-1 break-words">
                   <span className="font-bold">#{r.id}</span> · <span className="text-muted-foreground">{r.category} · {r.kind}</span>
                   <p className="font-semibold text-base">{r.images?.[0] && r.kind !== "match" ? `${r.images[0]} ` : ""}{r.prompt}</p>
                   <p>{r.kind === "match" ? r.options.map((o, i) => `${r.images?.[i]} ${o}`).join(" · ") : r.options.map((o) => (o === r.answer ? `✅ ${o}` : o)).join(" · ")}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {r.kind !== "match" && <button onClick={() => setEditing(r.id)} className="pop-btn bg-accent px-3 py-1 text-sm">Upravit</button>}
-                  <button onClick={async () => { if (confirm("Opravdu smazat?")) { await del({ data: { password: pw, id: r.id } }); await load(); } }}
-                    className="pop-btn bg-destructive text-destructive-foreground px-3 py-1 text-sm">Smazat</button>
+                  {r.kind !== "match" && <Button disabled={busy} onClick={() => setEditing(r.id)} variant="outline" size="sm">Upravit</Button>}
+                  <Button disabled={busy} onClick={async () => {
+                    if (!confirm("Opravdu smazat?")) return;
+                    setBusy(true); setMessage(null);
+                    try { await del({ data: { password: pw, id: r.id } }); setSelected((current) => { const next = new Set(current); next.delete(r.id); return next; }); await queryClient.invalidateQueries({ queryKey: ["questions"] }); await load(); }
+                    catch (e) { setMessage({ ok: false, t: errMsg(e) }); } finally { setBusy(false); }
+                  }} variant="destructive" size="sm">Smazat</Button>
                 </div>
               </div>
             )}

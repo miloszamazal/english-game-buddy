@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { bulkDeleteSchema, deleteSelectedQuestions } from "@/lib/bulk-delete";
 
 export const questionSchema = z
   .object({
@@ -76,4 +77,12 @@ export const deleteQuestion = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("questions").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const deleteQuestions = createServerFn({ method: "POST" })
+  .inputValidator((d: z.infer<typeof bulkDeleteSchema>) => bulkDeleteSchema.parse(d))
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return deleteSelectedQuestions(supabaseAdmin, data.subject, data.ids);
   });

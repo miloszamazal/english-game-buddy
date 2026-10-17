@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Bulk question deletion must validate the admin password server-side and constrain deletion by both explicit IDs and the selected subject; this prevents accidental cross-subject deletion.
