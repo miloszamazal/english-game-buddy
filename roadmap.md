@@ -5,3 +5,4 @@
 - [x] Ověření obou pohledů v náhledu (Playwright)
 - [x] Tlačítko pro vypnutí/zapnutí zvuku (přehrávání výslovnosti)
 - [x] Administrace: výběr otázek, filtr kategorie a potvrzené hromadné mazání pouze ve vybraném oboru; ověřeno 7 testy a přihlášeným průchodem na dvou dočasných otázkách.
+- [x] Výsledky „Podle jména": u každého záznamu popisek oboru (🇬🇧 Angličtina / 🇨🇿 Čeština / 🔢 Matematika); ověřeno v náhledu na dočasných záznamech, které byly poté smazány.

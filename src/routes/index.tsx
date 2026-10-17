@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, saveResult, setSoundEnabled, shuffle, type Question, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
-import { SUBJECTS, SubjectMenu, type SubjectId } from "@/lib/subjects";
+import { SUBJECTS, SubjectMenu, subjectMeta, type SubjectId } from "@/lib/subjects";
 
 const questionsQuery = queryOptions({ queryKey: ["questions"], queryFn: fetchQuestions, staleTime: Infinity });
 const resultsQuery = queryOptions({ queryKey: ["quiz-results"], queryFn: fetchResults, staleTime: 30_000 });
@@ -179,11 +179,17 @@ function End({ score, wrong, total, name, subject, onRestart }: { score: number;
   );
 }
 
-function ResultRow({ r, showPlayer }: { r: QuizResult; showPlayer?: boolean }) {
+function ResultRow({ r, showPlayer, showSubject }: { r: QuizResult; showPlayer?: boolean; showSubject?: boolean }) {
   const pct = Math.round((r.score / r.total) * 100);
+  const subj = subjectMeta(r.subject);
   return (
     <li className="flex items-center justify-between gap-3 text-sm font-display">
       <span className={showPlayer ? "font-bold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{showPlayer ? `👤 ${r.player_name}` : new Date(r.created_at).toLocaleString("cs-CZ")}</span>
+      {showSubject && (
+        <span className="pop-btn bg-card px-2 py-0.5 text-xs whitespace-nowrap" title={`Obor: ${subj.label}`}>
+          {subj.icon} {subj.label}
+        </span>
+      )}
       <span className="flex-1 h-3 rounded-full border-2 bg-card overflow-hidden mx-2">
         <span className={`block h-full ${pct >= 70 ? "bg-success" : pct >= 50 ? "bg-accent" : "bg-primary"}`} style={{ width: `${pct}%` }} />
       </span>
@@ -225,7 +231,7 @@ function Results() {
               </div>
             </div>
             <ul className="space-y-1">
-              {rs.slice(0, 5).map((r) => <ResultRow key={r.id} r={r} showPlayer={!isName} />)}
+              {rs.slice(0, 5).map((r) => <ResultRow key={r.id} r={r} showPlayer={!isName} showSubject={isName} />)}
             </ul>
             {rs.length > 5 && <p className="text-xs text-muted-foreground">…a {rs.length - 5} dalších kol</p>}
           </div>
