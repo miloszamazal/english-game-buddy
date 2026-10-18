@@ -14,9 +14,9 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "English Quest for Eli" },
+      { title: "Eli's tests" },
       { name: "description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
-      { property: "og:title", content: "English Quest for Eli" },
+      { property: "og:title", content: "Eli's tests" },
       { property: "og:description", content: "200 otázek na slovíčka, gramatiku a předložky. Pro děti 10–14 let." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -77,8 +77,7 @@ function Index() {
         <div className="flex-1 min-w-0 max-w-3xl">
         <header className="mb-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
-            <span className="text-primary">English</span> <span className="text-secondary">Quest</span>{" "}
-            <span className="text-accent">for Eli</span>
+            <span className="text-primary">{"Eli's"}</span> <span className="text-secondary">tests</span>
           </h1>
           <div className="mt-2 flex items-center justify-center gap-3">
             <p className="font-display text-xl">{subj.icon} {subj.label}</p>

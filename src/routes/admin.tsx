@@ -15,10 +15,10 @@ export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Administrace – English Quest for Eli" },
-      { name: "description", content: "Správa otázek kvízu English Quest for Eli." },
-      { property: "og:title", content: "Administrace – English Quest for Eli" },
-      { property: "og:description", content: "Správa otázek kvízu English Quest for Eli." },
+      { title: "Administrace – Eli's tests" },
+      { name: "description", content: "Správa otázek kvízu Eli's tests." },
+      { property: "og:title", content: "Administrace – Eli's tests" },
+      { property: "og:description", content: "Správa otázek kvízu Eli's tests." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
