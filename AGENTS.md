@@ -11,3 +11,4 @@
 
 - Bulk question deletion must validate the admin password server-side and constrain deletion by both explicit IDs and the selected subject; this prevents accidental cross-subject deletion.
 - Keep subject navigation in the shared SubjectMenu component so quiz and administration use the same responsive layout.
+- Quiz question components return immutable evaluated attempts to the active round; the end screen uses these in-memory attempts for mistake review without changing stored score records.

@@ -1,8 +1,8 @@
 import { subjectLang } from "@/lib/subjects";
 import { useMemo, useState } from "react";
-import { shuffle, speak, type Question } from "@/lib/quiz";
+import { evaluateAnswer, shuffle, speak, type Question, type QuestionAttempt } from "@/lib/quiz";
 
-export function MatchQuestion({ q, onDone }: { q: Question; onDone: (correct: boolean) => void }) {
+export function MatchQuestion({ q, onDone }: { q: Question; onDone: (attempt: QuestionAttempt) => void }) {
   const words = useMemo(() => shuffle(q.options), [q.id]);
   const [placed, setPlaced] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<string | null>(null);
@@ -23,9 +23,10 @@ export function MatchQuestion({ q, onDone }: { q: Question; onDone: (correct: bo
 
   const complete = Object.keys(placed).length === q.options.length;
   const check = () => {
+    if (!complete || checked) return;
     setChecked(true);
-    const ok = q.options.every((w, i) => placed[i] === w);
-    setTimeout(() => onDone(ok), 1400);
+    const attempt = evaluateAnswer(q, placed);
+    setTimeout(() => onDone(attempt), 1400);
   };
 
   return (
