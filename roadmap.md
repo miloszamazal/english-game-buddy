@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Přehled chybných odpovědí na konci testu včetně správného řešení (výběr i přiřazování); ověřeno dokončením skutečného 15otázkového kola.
+- [x] Kola Rychlovka 15, Výzva 30 a Mistr 50; 12 testů prošlo, všechny délky ověřeny v náhledu, mobil bez vodorovného přesahu.
+
 - [x] Výsledky: dvě podkategorie (Podle jména / Podle oboru) s přepínačem nahoře
 - [x] Ukládat obor k výsledku (sloupec subject v quiz_results)
 - [x] Ověření obou pohledů v náhledu (Playwright)

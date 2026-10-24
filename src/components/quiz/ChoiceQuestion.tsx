@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { Volume2 } from "lucide-react";
-import { shuffle, speak as baseSpeak, type Question } from "@/lib/quiz";
+import { evaluateAnswer, shuffle, speak as baseSpeak, type Question, type QuestionAttempt } from "@/lib/quiz";
 import { subjectLang } from "@/lib/subjects";
 
 const tileColors = ["bg-sun", "bg-sky", "bg-secondary/40", "bg-primary/25"];
 
-export function ChoiceQuestion({ q, onDone }: { q: Question; onDone: (correct: boolean) => void }) {
+export function ChoiceQuestion({ q, onDone }: { q: Question; onDone: (attempt: QuestionAttempt) => void }) {
   const options = useMemo(() => shuffle(q.options), [q.id]);
   const [picked, setPicked] = useState<string | null>(null);
   const speak = (t: string) => baseSpeak(t, subjectLang(q.subject));
@@ -20,9 +20,9 @@ export function ChoiceQuestion({ q, onDone }: { q: Question; onDone: (correct: b
   const pick = (o: string) => {
     if (picked) return;
     setPicked(o);
-    const ok = o === q.answer;
+    const attempt = evaluateAnswer(q, o);
     if (isSentence && q.audio) speak(q.audio);
-    setTimeout(() => onDone(ok), 1300);
+    setTimeout(() => onDone(attempt), 1300);
   };
 
   const parts = q.prompt.split("___");

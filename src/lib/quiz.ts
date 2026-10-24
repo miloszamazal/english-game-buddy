@@ -13,6 +13,25 @@ export type Question = {
   subject: string;
 };
 
+export const ROUND_SIZES = [15, 30, 50] as const;
+
+export type QuestionAttempt = {
+  question: Question;
+  response: string | Record<number, string>;
+  correct: boolean;
+};
+
+export function evaluateAnswer(question: Question, response: QuestionAttempt["response"]): QuestionAttempt {
+  const correct = question.kind === "match"
+    ? typeof response !== "string" && question.options.every((word, index) => response[index] === word)
+    : typeof response === "string" && response === question.answer;
+  return { question, response: typeof response === "string" ? response : { ...response }, correct };
+}
+
+export function incorrectAttempts(attempts: QuestionAttempt[]) {
+  return attempts.filter((attempt) => !attempt.correct);
+}
+
 export async function fetchQuestions(): Promise<Question[]> {
   const { data, error } = await supabase.from("questions").select("*").order("id");
   if (error) throw new Error(error.message);

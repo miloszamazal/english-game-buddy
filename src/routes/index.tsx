@@ -2,9 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, saveResult, setSoundEnabled, shuffle, type Question, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, ROUND_SIZES, saveResult, setSoundEnabled, shuffle, type Question, type QuestionAttempt, type QuizResult } from "@/lib/quiz";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
+import { MistakeReview } from "@/components/quiz/MistakeReview";
+import { Button } from "@/components/ui/button";
 import { SUBJECTS, SubjectMenu, subjectMeta, type SubjectId } from "@/lib/subjects";
 
 const questionsQuery = queryOptions({ queryKey: ["questions"], queryFn: fetchQuestions, staleTime: Infinity });
@@ -37,12 +39,13 @@ function Index() {
   const [subject, setSubject] = useState<SubjectId>("en");
   const all = everything.filter((q) => (q.subject ?? "en") === subject);
   const counts = everything.reduce<Record<string, number>>((m, q) => ((m[q.subject ?? "en"] = (m[q.subject ?? "en"] ?? 0) + 1), m), {});
-  const subj = SUBJECTS.find((s) => s.id === subject)!;
+  const subj = subjectMeta(subject);
   const [wrong, setWrong] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [phase, setPhase] = useState<"start" | "play" | "end">("start");
   const [name, setName] = useState("");
   const [round, setRound] = useState<Question[]>([]);
+  const [attempts, setAttempts] = useState<QuestionAttempt[]>([]);
   const [i, setI] = useState(0);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -50,12 +53,15 @@ function Index() {
   const [soundOn, setSoundOn] = useState(isSoundOn);
 
   const start = (count: number) => {
-    if (!hasPlayerName(name)) return;
+    if (!hasPlayerName(name) || !ROUND_SIZES.some((size) => size === count) || all.length < count) return;
     setRound(shuffle(all).slice(0, count));
+    setAttempts([]);
     setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
   };
 
-  const answer = (ok: boolean) => {
+  const answer = (attempt: QuestionAttempt) => {
+    const ok = attempt.correct;
+    setAttempts((previous) => [...previous, attempt]);
     const list = ok ? cheers : oops;
     setToast({ text: list[Math.floor(Math.random() * list.length)] ?? "", ok });
     if (ok) {
@@ -116,7 +122,7 @@ function Index() {
             </div>
           </div>
         )}
-        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} attempts={attempts} onRestart={() => setPhase("start")} />}
         </div>
       </div>
     </main>
@@ -143,17 +149,20 @@ function Start({ subject, total, name, setName, onStart }: { subject: string; to
         {named ? `Super, ${name.trim()}! Teď vyber kolo 👇` : "✍️ Nejdřív napiš svoje jméno – bez něj kvíz nespustíš."}
       </p>
       <div className="flex flex-wrap justify-center gap-4">
-        {total > 20 && <button onClick={() => onStart(20)} disabled={!named} className="pop-btn bg-secondary text-secondary-foreground px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Rychlovka · 20</button>}
-        {total > 50 && <button onClick={() => onStart(50)} disabled={!named} className="pop-btn bg-primary text-primary-foreground px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Výzva · 50</button>}
-        <button onClick={() => onStart(total)} disabled={!named} className="pop-btn bg-accent px-6 py-3 text-xl disabled:opacity-40 disabled:cursor-not-allowed">Mistr · všech {total}</button>
+        {ROUND_SIZES.map((count, index) => (
+          <Button key={count} variant="ghost" onClick={() => onStart(count)} disabled={!named || total < count} title={total < count ? `V tomto oboru zatím není ${count} otázek` : undefined} className={`pop-btn h-auto whitespace-normal px-6 py-3 text-xl ${index === 0 ? "bg-secondary text-secondary-foreground" : index === 1 ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
+            {["Rychlovka", "Výzva", "Mistr"][index]} · {count}
+          </Button>
+        ))}
       </div>
       <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
     </div>
   );
 }
 
-function End({ score, wrong, total, name, subject, onRestart }: { score: number; wrong: number; total: number; name: string; subject: string; onRestart: () => void }) {
+function End({ score, wrong, total, name, subject, attempts, onRestart }: { score: number; wrong: number; total: number; name: string; subject: string; attempts: QuestionAttempt[]; onRestart: () => void }) {
   const saved = useRef(false);
+  const [showMistakes, setShowMistakes] = useState(false);
   const pct = Math.round((score / total) * 100);
   useEffect(() => {
     if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total, subject).catch(() => {}); }
@@ -173,7 +182,11 @@ function End({ score, wrong, total, name, subject, onRestart }: { score: number;
       <p className="font-display text-7xl font-bold text-primary">{score} / {total}</p>
       <p className="text-2xl font-display">⭐ {score} správně · ❌ {wrong} špatně</p>
       <p className="text-xl text-muted-foreground">Úspěšnost {pct} %</p>
-      <button onClick={onRestart} className="pop-btn bg-secondary text-secondary-foreground px-10 py-4 text-2xl">Zkusit znovu 🔄</button>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button variant="ghost" onClick={() => setShowMistakes((show) => !show)} aria-expanded={showMistakes} aria-controls="mistake-review" className="pop-btn h-auto whitespace-normal bg-card px-6 py-3 text-lg">{showMistakes ? "Skrýt chybné odpovědi" : `Zobrazit chybné odpovědi (${wrong})`}</Button>
+        <Button variant="ghost" onClick={onRestart} className="pop-btn h-auto whitespace-normal bg-secondary text-secondary-foreground px-6 py-3 text-xl">Zkusit znovu 🔄</Button>
+      </div>
+      {showMistakes && <MistakeReview attempts={attempts} />}
     </div>
   );
 }
