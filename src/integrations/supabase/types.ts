@@ -58,6 +58,7 @@ export type Database = {
           score: number
           subject: string
           total: number
+          wrong_question_ids: number[]
         }
         Insert: {
           created_at?: string
@@ -66,6 +67,7 @@ export type Database = {
           score: number
           subject?: string
           total: number
+          wrong_question_ids?: number[]
         }
         Update: {
           created_at?: string
@@ -74,6 +76,7 @@ export type Database = {
           score?: number
           subject?: string
           total?: number
+          wrong_question_ids?: number[]
         }
         Relationships: []
       }

@@ -32,6 +32,18 @@ export function incorrectAttempts(attempts: QuestionAttempt[]) {
   return attempts.filter((attempt) => !attempt.correct);
 }
 
+export function wrongQuestionIds(attempts: QuestionAttempt[]): number[] {
+  return [...new Set(incorrectAttempts(attempts).map((attempt) => attempt.question.id))];
+}
+
+export function mistakeQuestions(questions: Question[], results: QuizResult[], name: string, subject: string): Question[] {
+  if (!hasPlayerName(name)) return [];
+  const ids = new Set(results
+    .filter((result) => result.player_name.trim() === name.trim() && (result.subject || "en") === subject)
+    .flatMap((result) => result.wrong_question_ids ?? []));
+  return questions.filter((question) => (question.subject || "en") === subject && ids.has(question.id));
+}
+
 export async function fetchQuestions(): Promise<Question[]> {
   const { data, error } = await supabase.from("questions").select("*").order("id");
   if (error) throw new Error(error.message);
@@ -76,11 +88,13 @@ export function hasPlayerName(name: string) {
   return name.trim().length > 0;
 }
 
-export async function saveResult(player_name: string, score: number, total: number, subject: string) {
-  await supabase.from("quiz_results").insert({ player_name: player_name.slice(0, 30) || "Hráč", score, total, subject });
+export async function saveResult(player_name: string, score: number, total: number, subject: string, attempts: QuestionAttempt[] = []): Promise<QuizResult> {
+  const { data, error } = await supabase.from("quiz_results").insert({ player_name: player_name.trim().slice(0, 30) || "Hráč", score, total, subject, wrong_question_ids: wrongQuestionIds(attempts) }).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export type QuizResult = { id: string; player_name: string; score: number; total: number; created_at: string; subject: string };
+export type QuizResult = { id: string; player_name: string; score: number; total: number; created_at: string; subject: string; wrong_question_ids?: number[] };
 
 export function groupResultsByPlayer(results: QuizResult[]): [string, QuizResult[]][] {
   const byPlayer = new Map<string, QuizResult[]>();

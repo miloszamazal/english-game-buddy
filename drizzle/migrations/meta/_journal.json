@@ -15,6 +15,13 @@
       "when": 1791983813660,
       "tag": "0001_add_subject",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792952537949,
+      "tag": "0002_quiz_result_mistakes",
+      "breakpoints": true
     }
   ]
 }

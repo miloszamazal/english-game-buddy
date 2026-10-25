@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, ROUND_SIZES, saveResult, setSoundEnabled, shuffle, type Question, type QuestionAttempt, type QuizResult } from "@/lib/quiz";
+import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, mistakeQuestions, ROUND_SIZES, saveResult, setSoundEnabled, shuffle, type Question, type QuestionAttempt, type QuizResult } from "@/lib/quiz";
+import { RotateCcw } from "lucide-react";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
 import { MistakeReview } from "@/components/quiz/MistakeReview";
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(questionsQuery),
+  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(questionsQuery), context.queryClient.ensureQueryData(resultsQuery)]),
   pendingComponent: () => <div className="min-h-screen flex items-center justify-center font-display text-3xl animate-pulse">Načítám otázky… 🚀</div>,
   errorComponent: ({ error }) => <div className="p-8 text-center">Otázky se nepodařilo načíst: {error instanceof Error ? error.message : String(error)}</div>,
   notFoundComponent: () => <div className="p-8 text-center">Nenalezeno.</div>,
@@ -36,6 +37,7 @@ const oops = ["Nevadí, příště! 💪", "Skoro! 🙂", "Zkus to dál! 🍀"];
 
 function Index() {
   const { data: everything } = useSuspenseQuery(questionsQuery);
+  const { data: results } = useSuspenseQuery(resultsQuery);
   const [subject, setSubject] = useState<SubjectId>("en");
   const all = everything.filter((q) => (q.subject ?? "en") === subject);
   const counts = everything.reduce<Record<string, number>>((m, q) => ((m[q.subject ?? "en"] = (m[q.subject ?? "en"] ?? 0) + 1), m), {});
@@ -51,12 +53,18 @@ function Index() {
   const [streak, setStreak] = useState(0);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
   const [soundOn, setSoundOn] = useState(isSoundOn);
+  const retryQuestions = mistakeQuestions(everything, results, name, subject);
 
-  const start = (count: number) => {
-    if (!hasPlayerName(name) || !ROUND_SIZES.some((size) => size === count) || all.length < count) return;
-    setRound(shuffle(all).slice(0, count));
+  const beginRound = (questions: Question[]) => {
+    if (!hasPlayerName(name) || questions.length === 0) return;
+    setRound(shuffle(questions));
     setAttempts([]);
     setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
+  };
+
+  const start = (count: number) => {
+    if (!ROUND_SIZES.some((size) => size === count) || all.length < count) return;
+    beginRound(shuffle(all).slice(0, count));
   };
 
   const answer = (attempt: QuestionAttempt) => {
@@ -101,7 +109,7 @@ function Index() {
         {!showResults && phase === "start" && all.length === 0 && (
           <div className="pop-card p-8 text-center space-y-4"><div className="text-6xl">🚧</div><p className="text-lg">V sekci <b>{subj.label}</b> zatím nejsou žádné otázky. Přidejte je v administraci.</p><Link to="/admin" className="underline">⚙️ Administrace</Link></div>
         )}
-        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} />}
+        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} mistakeCount={retryQuestions.length} onRetry={() => beginRound(retryQuestions)} />}
         {!showResults && phase === "play" && round[i] && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4 font-display font-semibold">
@@ -122,14 +130,14 @@ function Index() {
             </div>
           </div>
         )}
-        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} attempts={attempts} onRestart={() => setPhase("start")} />}
+        {!showResults && phase === "end" && <End score={score} wrong={wrong} total={round.length} name={name} subject={subject} attempts={attempts} onRestart={() => setPhase("start")} mistakeCount={retryQuestions.length} onRetry={() => beginRound(retryQuestions)} />}
         </div>
       </div>
     </main>
   );
 }
 
-function Start({ subject, total, name, setName, onStart }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void }) {
+function Start({ subject, total, name, setName, onStart, mistakeCount, onRetry }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void; mistakeCount: number; onRetry: () => void }) {
   const named = hasPlayerName(name);
   return (
     <div className="pop-card p-8 text-center space-y-6 animate-pop-in">
@@ -155,17 +163,34 @@ function Start({ subject, total, name, setName, onStart }: { subject: string; to
           </Button>
         ))}
       </div>
+      <div className="space-y-2">
+        <Button variant="ghost" onClick={onRetry} disabled={!named || mistakeCount === 0} className="pop-btn h-auto whitespace-normal bg-card px-6 py-3 text-lg max-w-full">
+          <RotateCcw className="size-5 shrink-0" /> Procvičit chyby · {mistakeCount}
+        </Button>
+        {named && mistakeCount === 0 && <p className="text-sm text-muted-foreground">Pro toto jméno a předmět zatím nejsou uložené chybné otázky.</p>}
+      </div>
       <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
     </div>
   );
 }
 
-function End({ score, wrong, total, name, subject, attempts, onRestart }: { score: number; wrong: number; total: number; name: string; subject: string; attempts: QuestionAttempt[]; onRestart: () => void }) {
-  const saved = useRef(false);
+function End({ score, wrong, total, name, subject, attempts, onRestart, mistakeCount, onRetry }: { score: number; wrong: number; total: number; name: string; subject: string; attempts: QuestionAttempt[]; onRestart: () => void; mistakeCount: number; onRetry: () => void }) {
+  const queryClient = useQueryClient();
+  const saved = useRef<Promise<QuizResult> | null>(null);
+  const [saveState, setSaveState] = useState<"saving" | "saved" | "error">("saving");
   const [showMistakes, setShowMistakes] = useState(false);
   const pct = Math.round((score / total) * 100);
+  const persist = () => {
+    setSaveState("saving");
+    saved.current ??= saveResult(name.trim(), score, total, subject, attempts);
+    saved.current.then((result) => {
+      queryClient.setQueryData<QuizResult[]>(resultsQuery.queryKey, (previous) => [result, ...(previous ?? []).filter((row) => row.id !== result.id)]);
+      setSaveState("saved");
+      void queryClient.invalidateQueries({ queryKey: resultsQuery.queryKey });
+    }).catch(() => { saved.current = null; setSaveState("error"); });
+  };
   useEffect(() => {
-    if (!saved.current) { saved.current = true; saveResult(name.trim(), score, total, subject).catch(() => {}); }
+    persist();
     const end = Date.now() + 2500;
     const frame = () => {
       confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0 } });
@@ -183,9 +208,12 @@ function End({ score, wrong, total, name, subject, attempts, onRestart }: { scor
       <p className="text-2xl font-display">⭐ {score} správně · ❌ {wrong} špatně</p>
       <p className="text-xl text-muted-foreground">Úspěšnost {pct} %</p>
       <div className="flex flex-wrap justify-center gap-3">
+        <Button variant="ghost" onClick={onRetry} disabled={saveState !== "saved" || mistakeCount === 0} className="pop-btn h-auto whitespace-normal bg-accent px-6 py-3 text-lg max-w-full"><RotateCcw className="size-5 shrink-0" /> Procvičit chyby · {mistakeCount}</Button>
         <Button variant="ghost" onClick={() => setShowMistakes((show) => !show)} aria-expanded={showMistakes} aria-controls="mistake-review" className="pop-btn h-auto whitespace-normal bg-card px-6 py-3 text-lg">{showMistakes ? "Skrýt chybné odpovědi" : `Zobrazit chybné odpovědi (${wrong})`}</Button>
         <Button variant="ghost" onClick={onRestart} className="pop-btn h-auto whitespace-normal bg-secondary text-secondary-foreground px-6 py-3 text-xl">Zkusit znovu 🔄</Button>
       </div>
+      {saveState === "saving" && <p role="status" className="text-sm text-muted-foreground">Ukládám výsledek a chybné otázky…</p>}
+      {saveState === "error" && <div role="alert" className="space-y-2 text-destructive"><p>Výsledek a chybné otázky se nepodařilo uložit.</p><Button variant="outline" onClick={persist}>Zkusit uložit znovu</Button></div>}
       {showMistakes && <MistakeReview attempts={attempts} />}
     </div>
   );
