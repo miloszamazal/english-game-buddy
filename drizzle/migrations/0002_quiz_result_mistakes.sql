@@ -1,0 +1,2 @@
+ALTER TABLE public.quiz_results ADD COLUMN wrong_question_ids integer[] NOT NULL DEFAULT '{}';
+COMMENT ON COLUMN public.quiz_results.wrong_question_ids IS 'Distinct question IDs answered incorrectly in this completed round; historical results without attempt data default to empty.';

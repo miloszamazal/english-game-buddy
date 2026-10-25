@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Ukládat chybné otázky dokončených testů a nabídnout nový test z chyb pro stejné jméno a obor; ověřit i po obnovení stránky.
+
 - [x] Přehled chybných odpovědí na konci testu včetně správného řešení (výběr i přiřazování); ověřeno dokončením skutečného 15otázkového kola.
 - [x] Kola Rychlovka 15, Výzva 30 a Mistr 50; 12 testů prošlo, všechny délky ověřeny v náhledu, mobil bez vodorovného přesahu.
 
