@@ -20,7 +20,8 @@ describe("Mistake retry rounds", () => {
     expect(mistakeQuestions([{ ...question, subject: "math" }], [result], "Eli", "en")).toEqual([]);
   });
   it("omits deleted questions and old results without mistake data", () => {
-    expect(mistakeQuestions([question], [{ ...result, wrong_question_ids: [999] }, { ...result, wrong_question_ids: undefined }], "Eli", "en")).toEqual([]);
+    const { wrong_question_ids, ...legacyResult } = result;
+    expect(mistakeQuestions([question], [{ ...result, wrong_question_ids: [999] }, legacyResult], "Eli", "en")).toEqual([]);
   });
   it("requires a name and matches the existing trimmed player identity", () => {
     expect(mistakeQuestions([question], [result], "  ", "en")).toEqual([]);
