@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, mistakeQuestions, ROUND_SIZES, saveResult, setSoundEnabled, shuffle, type Question, type QuestionAttempt, type QuizResult } from "@/lib/quiz";
+import { fetchPlayerNames, fetchQuestions, fetchResults, groupResultsByPlayer, groupResultsBySubject, hasPlayerName, isSoundOn, mistakeQuestions, ROUND_SIZES, saveResult, setSoundEnabled, shuffle, type Question, type QuestionAttempt, type QuizResult } from "@/lib/quiz";
+import { PlayerAuth, usePlayer } from "@/components/quiz/PlayerAuth";
 import { RotateCcw } from "lucide-react";
 import { ChoiceQuestion } from "@/components/quiz/ChoiceQuestion";
 import { MatchQuestion } from "@/components/quiz/MatchQuestion";
@@ -12,6 +13,7 @@ import { SUBJECTS, SubjectMenu, subjectMeta, type SubjectId } from "@/lib/subjec
 
 const questionsQuery = queryOptions({ queryKey: ["questions"], queryFn: fetchQuestions, staleTime: Infinity });
 const resultsQuery = queryOptions({ queryKey: ["quiz-results"], queryFn: fetchResults, staleTime: 30_000 });
+const playersQuery = queryOptions({ queryKey: ["player-names"], queryFn: fetchPlayerNames, staleTime: 30_000 });
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(questionsQuery), context.queryClient.ensureQueryData(resultsQuery)]),
+  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(questionsQuery), context.queryClient.ensureQueryData(resultsQuery), context.queryClient.ensureQueryData(playersQuery)]),
   pendingComponent: () => <div className="min-h-screen flex items-center justify-center font-display text-3xl animate-pulse">Načítám otázky… 🚀</div>,
   errorComponent: ({ error }) => <div className="p-8 text-center">Otázky se nepodařilo načíst: {error instanceof Error ? error.message : String(error)}</div>,
   notFoundComponent: () => <div className="p-8 text-center">Nenalezeno.</div>,
@@ -45,7 +47,8 @@ function Index() {
   const [wrong, setWrong] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [phase, setPhase] = useState<"start" | "play" | "end">("start");
-  const [name, setName] = useState("");
+  const { player, loading: playerLoading } = usePlayer();
+  const name = player?.username ?? "";
   const [round, setRound] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState<QuestionAttempt[]>([]);
   const [i, setI] = useState(0);
@@ -56,7 +59,7 @@ function Index() {
   const retryQuestions = mistakeQuestions(everything, results, name, subject);
 
   const beginRound = (questions: Question[]) => {
-    if (!hasPlayerName(name) || questions.length === 0) return;
+    if (!player || playerLoading || !hasPlayerName(name) || questions.length === 0) return;
     setRound(shuffle(questions));
     setAttempts([]);
     setI(0); setScore(0); setWrong(0); setStreak(0); setPhase("play");
@@ -109,7 +112,7 @@ function Index() {
         {!showResults && phase === "start" && all.length === 0 && (
           <div className="pop-card p-8 text-center space-y-4"><div className="text-6xl">🚧</div><p className="text-lg">V sekci <b>{subj.label}</b> zatím nejsou žádné otázky. Přidejte je v administraci.</p><Link to="/admin" className="underline">⚙️ Administrace</Link></div>
         )}
-        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} setName={setName} onStart={start} mistakeCount={retryQuestions.length} onRetry={() => beginRound(retryQuestions)} />}
+        {!showResults && phase === "start" && all.length > 0 && <Start subject={subj.label} total={all.length} name={name} onStart={start} mistakeCount={retryQuestions.length} onRetry={() => beginRound(retryQuestions)} />}
         {!showResults && phase === "play" && round[i] && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4 font-display font-semibold">
@@ -137,24 +140,19 @@ function Index() {
   );
 }
 
-function Start({ subject, total, name, setName, onStart, mistakeCount, onRetry }: { subject: string; total: number; name: string; setName: (s: string) => void; onStart: (n: number) => void; mistakeCount: number; onRetry: () => void }) {
-  const named = hasPlayerName(name);
+function Start({ subject, total, name, onStart, mistakeCount, onRetry }: { subject: string; total: number; name: string; onStart: (n: number) => void; mistakeCount: number; onRetry: () => void }) {
+  const { data: names } = useSuspenseQuery(playersQuery);
+  const { player, loading } = usePlayer();
+  const named = Boolean(player) && !loading;
   return (
     <div className="pop-card p-8 text-center space-y-6 animate-pop-in">
       <div className="text-7xl animate-float">🦉📚✨</div>
       <p className="text-lg">
         Téma <b>{subject}</b>. V databázi čeká <b>{total} otázek</b> – vyber si, kolik jich zvládneš.
       </p>
-      <input
-        value={name}
-        maxLength={30}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Tvoje jméno"
-        aria-label="Tvoje jméno"
-        className="w-full max-w-xs mx-auto block rounded-xl border-[3px] px-4 py-3 text-lg text-center font-display bg-background"
-      />
+      <PlayerAuth names={names} />
       <p className={`font-display font-semibold ${named ? "text-success" : "text-destructive"}`}>
-        {named ? `Super, ${name.trim()}! Teď vyber kolo 👇` : "✍️ Nejdřív napiš svoje jméno – bez něj kvíz nespustíš."}
+        {named ? `Super, ${name.trim()}! Teď vyber kolo 👇` : "🔐 Nejdřív se přihlas nebo si vytvoř hráče."}
       </p>
       <div className="flex flex-wrap justify-center gap-4">
         {ROUND_SIZES.map((count, index) => (

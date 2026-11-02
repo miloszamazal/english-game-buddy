@@ -22,6 +22,13 @@
       "when": 1792952537949,
       "tag": "0002_quiz_result_mistakes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793604520935,
+      "tag": "0003_player_username_profiles",
+      "breakpoints": true
     }
   ]
 }
