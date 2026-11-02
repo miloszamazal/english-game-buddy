@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          normalized_username: string | null
+          username: string
+        }
+        Insert: {
+          id: string
+          normalized_username?: string | null
+          username: string
+        }
+        Update: {
+          id?: string
+          normalized_username?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       questions: {
         Row: {
           answer: string | null
