@@ -13,3 +13,5 @@
 - Keep subject navigation in the shared SubjectMenu component so quiz and administration use the same responsive layout.
 - Quiz question components return immutable evaluated attempts to the active round; the end screen uses them for mistake review and persists distinct incorrect question IDs with each completed score record, so retry rounds survive reloads.
 - Build mistake retry rounds from the union of completed results for the exact trimmed player name and selected subject, resolving IDs against current questions and omitting deleted questions; historical scores without attempt data cannot reconstruct mistakes.
+- Player login uses Cloud Auth with a deterministic SHA-256 synthetic address and an immutable signup-trigger-created username profile; passwords are never stored in application tables, and result inserts are restricted to the authenticated profile name.
+- Keep the single identity-transition subscription in PlayerProvider at the root; validate restored identities with getUser and fetch the profile before enabling quiz rounds.

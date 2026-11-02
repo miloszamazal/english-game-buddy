@@ -128,3 +128,13 @@ export async function fetchResults(): Promise<QuizResult[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as QuizResult[];
 }
+
+export async function fetchPlayerNames(): Promise<string[]> {
+  const names: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("profiles").select("username").order("username").range(offset, offset + 999);
+    if (error) throw new Error(error.message);
+    names.push(...(data ?? []).map((row) => row.username));
+    if (!data || data.length < 1000) return names;
+  }
+}
