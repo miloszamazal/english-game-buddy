@@ -1,0 +1,79 @@
+# Build and deploy the app to Cloudflare Workers (free plan).
+# GitHub Pages can only serve static files, but this app needs a server for
+# player login and the admin section (TanStack Start server functions).
+#
+# Setup (once): add repository secrets in Settings -> Secrets and variables -> Actions:
+#   CLOUDFLARE_API_TOKEN    - Cloudflare API token from the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID   - Cloudflare account ID
+#   ADMIN_PASSWORD          - password for the admin section
+#   SUPABASE_SERVICE_ROLE_KEY - optional, needed only for saving questions in the admin section
+# SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are public and are read from .env.
+#
+# This file does not affect Lovable: Lovable keeps its own build and hosting.
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # bun.lock points to Lovable's private package cache, which is not
+      # reachable from GitHub, so install from the public npm registry instead.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Build
+        run: npm run build
+
+      - name: Check Cloudflare secrets
+        id: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set, skipping deploy (build only)."
+          fi
+
+      - name: Deploy worker
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.cf.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
+
+      - name: Upload worker secrets
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.cf.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -a; . ./.env; set +a
+          node -e '
+            const keys = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "ADMIN_PASSWORD", "SUPABASE_SERVICE_ROLE_KEY"];
+            const out = {};
+            for (const k of keys) if (process.env[k]) out[k] = process.env[k];
+            require("fs").writeFileSync("secrets.json", JSON.stringify(out));
+            console.log("Uploading:", Object.keys(out).join(", "));
+          '
+          npx --yes wrangler@4 secret bulk secrets.json
+          rm secrets.json
