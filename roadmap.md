@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Přihlášení jménem a heslem do 10 znaků, registrace při prvním použití jména, nabídka registrovaných jmen a ověření přihlášení i kvízu.
+- [x] Přihlášení jménem a heslem do 10 znaků, registrace při prvním použití jména a nabídka registrovaných jmen; ověřeno registrací, odmítnutím chybného hesla, přihlášením z nabídky, obnovením stránky a dokončením 15otázkového kola s uložením výsledku. Všech 30 testů prošlo.
 
 - [x] Ukládat chybné otázky dokončených testů a nabídnout nový test z chyb pro stejné jméno a obor; ověřeno dokončením běžného kola i opakování po obnovení stránky (stejných 15 otázek), 19 testy a mobilní kontrolou bez vodorovného přesahu. Starší výsledky bez uložených odpovědí nelze zpětně rekonstruovat.
 

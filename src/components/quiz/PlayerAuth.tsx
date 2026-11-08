@@ -52,6 +52,9 @@ export function PlayerAuth({ names }: { names: string[] }) {
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (player) { setRegister(false); setPassword(""); setConfirmation(""); setError(""); }
+  }, [player]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
