@@ -24,3 +24,18 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Deploy to Cloudflare Workers
+
+Besides Lovable hosting, the app is deployed to Cloudflare Workers (free plan) by
+`.github/workflows/deploy-cloudflare.yml` on every push to `main`. GitHub Pages
+cannot host it, because player login and the admin section run as server functions.
+
+One-time setup, in GitHub → Settings → Secrets and variables → Actions:
+
+- `CLOUDFLARE_API_TOKEN` – API token created from the "Edit Cloudflare Workers" template
+- `CLOUDFLARE_ACCOUNT_ID` – your Cloudflare account ID
+- `ADMIN_PASSWORD` – password for the admin section
+- `SUPABASE_SERVICE_ROLE_KEY` – optional, needed only to save questions in the admin section
+
+The app is then available at `https://miloszamazal-english-game-buddy.<your-subdomain>.workers.dev`.
