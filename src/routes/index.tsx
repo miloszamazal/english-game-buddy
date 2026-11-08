@@ -167,7 +167,6 @@ function Start({ subject, total, name, onStart, mistakeCount, onRetry }: { subje
         </Button>
         {named && mistakeCount === 0 && <p className="text-sm text-muted-foreground">Pro toto jméno a předmět zatím nejsou uložené chybné otázky.</p>}
       </div>
-      <Link to="/admin" className="inline-block text-sm text-muted-foreground underline">⚙️ Administrace</Link>
     </div>
   );
 }

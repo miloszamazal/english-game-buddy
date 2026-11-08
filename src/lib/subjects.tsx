@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 
 export const SUBJECTS = [
   { id: "en", label: "Angličtina", icon: "🇬🇧", lang: "en-GB" },
@@ -41,6 +42,14 @@ export function SubjectMenu({ value, onChange, counts, showResults, onResults }:
         >
           <span className="text-xl md:text-2xl shrink-0">🏆</span>
           <span className="min-w-0 md:flex-1 text-sm md:text-base"><span className="hidden md:inline">{SUBJECTS.length + 1}. </span>Výsledky</span>
+        </Button>
+      )}
+      {onResults && (
+        <Button asChild variant="ghost" className="pop-btn col-span-2 h-auto min-h-14 min-w-0 px-2 md:px-4 py-2 md:py-3 text-left flex items-center justify-start gap-2 whitespace-normal bg-card">
+          <Link to="/admin">
+            <span className="text-xl md:text-2xl shrink-0">⚙️</span>
+            <span className="min-w-0 text-sm md:text-base"><span className="hidden md:inline">{SUBJECTS.length + 2}. </span>Administrace</span>
+          </Link>
         </Button>
       )}
     </nav>
